@@ -1,0 +1,77 @@
+html,body,h1,h2,h3,h4,p,div,ul,li,svg{
+	margin:0;
+	padding:0;
+	font-size:100%;
+}
+
+/*------------Structure-------------*/
+html,body{
+	height: 100%;
+	position: relative;
+	background: rgb(250,250,250);
+}
+.container{
+    height:100%;
+    overflow:hidden;
+}
+.container .canvas{
+	width:100%;
+	height: 100%;
+	position: relative;
+}
+
+
+/*------------font-------------*/
+body{
+	font-family:"Roboto Condensed",Helvetica,sans-serif;
+	font-size: 16px;
+    color:#fff;
+}
+h1{
+	font-size: 2em;
+	margin: 30px 0 30px;
+}
+h2{
+	font-size:1.5em;
+	margin: 0 0 20px;
+}
+p{
+    margin: 0 0 20px;
+}
+
+/*------------tooltip-------------*/
+
+/*-----------control--------------*/
+.control{
+	position:relative;
+	top:100px;
+	margin:auto;
+	z-index:999;
+}
+.canvas{
+	position:absolute;
+	
+}
+.custom-tooltip{
+	position:absolute;
+	width:200px;
+	padding:10px;
+	background:rgb(50,50,50);
+	color:white;
+	z-index:1000;
+	top:0;
+	left:0;
+	opacity:0;
+}
+	.custom-tooltip .data{
+		display:block;
+		font-size:1.6em;
+		font-weight:bold;
+	}
+/*------------svg-----------------*/
+
+/*Styling axes*/
+.hood{
+	stroke:white;
+	stroke-width:1px;
+}
