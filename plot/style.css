@@ -23,9 +23,9 @@ html,body{
 
 /*------------font-------------*/
 body{
-	font-family:"Roboto Condensed",sans-serif;
+	font-family:Helvetica,Arial,sans-serif;
 	font-size: 16px;
-    color:rgb(30,30,30);
+    color:#fff;
 }
 h1{
 	font-size: 2em;
@@ -67,39 +67,5 @@ p{
 }
 
 /*------------svg-----------------*/
-.canvas text.important{
-		font-size:20px;
-	}
 
-.canvas .time-wheel .time-range{
-	fill:rgb(200,200,200);
-	stroke:rgb(240,240,240);
-	stroke-width:.5px;
-}
-	.canvas .time-wheel .time-range:hover,
-	.canvas .time-wheel .time-range.current{
-		fill:rgb(50,50,50);
-	}
-
-.canvas .area{
-	fill:rgba(200,200,200,.5);
-	stroke:rgb(100,100,100);
-	stroke-width:1px;
-}
-.canvas .cap-area{
-	fill:yellow;
-	fill-opacity:.2;
-}
-.canvas .station line{
-	stroke:rgb(200,200,200);
-	stroke-width:.5px;
-}
-.canvas .station text{
-	font-size:9px;
-}
-.canvas .center-line.above{ fill:none; }
-.canvas .center-line.Red,
-.canvas .center-line.Red-A,
-.canvas .center-line.Red-B{ stroke:red; }
-.canvas .center-line.Orange{ stroke:#ef5636;}
-.canvas .center-line.Blue{stroke:#0076c0;}
+/*Styling axes*/

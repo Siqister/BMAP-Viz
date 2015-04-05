@@ -12,8 +12,15 @@ var canvas = d3.select('.canvas')
     .attr('transform','translate('+margin.l+','+margin.t+')');
 
 //Metadata global
-var metaDataOl = []; //TODO: need to figure out how this part works
 var currentTime = "8:00"; //Global variable keeps track of time
+var metadata = {}; //Service capacity standards
+var carCap = {
+    "Orange":58,
+    "Red":58,
+    "Red-A":58,
+    "Red-B":58,
+    "Blue":42
+}
 
 //Size, padding and positions for the lines
 var numLines = 4, //Orange, Red, Blue, Green
@@ -54,8 +61,8 @@ var connectors = [
 
 //Scales
 var scaleY = d3.scale.linear().domain([-9,13]).range([0,height]),
-    scaleXLeft = d3.scale.linear().domain([0,7000]).range([wPerLine/2,0]),
-    scaleXRight = d3.scale.linear().domain([0,7000]).range([wPerLine/2,wPerLine]);
+    scaleXLeft = d3.scale.linear().domain([0,10000]).range([wPerLine/2,0]),
+    scaleXRight = d3.scale.linear().domain([0,10000]).range([wPerLine/2,wPerLine]);
 
 //Generate a time wheel for control
 var dispatch = d3.dispatch("timeChange");
@@ -101,11 +108,11 @@ function onTimeChange(d){
 
 //TODO: junky animation
 var i = 8;
-/*setInterval(function(){
+setInterval(function(){
     onTimeChange(i);
     i++;
     if(i>23){ i = 0;}
-},200);*/
+},200);
 
 
 //Add <g> element for each line
@@ -124,11 +131,11 @@ canvas.selectAll('.line')
 
         queue()
             .defer(d3.csv, "data/"+line+"-dist.csv",parseDist)
-            .defer(d3.csv, "data/"+line+"-metadata.csv",parseMeta)
+            .defer(d3.csv, "data/"+line+"-metadata.csv",parseMeta(d))
             .defer(d3.csv, "data/"+line+"-volume-left.csv",parseVolume)
             .defer(d3.csv, "data/"+line+"-volume-right.csv",parseVolume)
             .await(function(err,dist,cap,left,right){
-                draw(left,right,dist,self,d);
+                draw(left,right,dist,self,d,cap);
             });
     });
 
@@ -153,11 +160,13 @@ canvas.selectAll('.connector')
 
 
 //Draw individual lines, including branches
-function draw(top,bottom,dist,ctx,name){
+function draw(top,bottom,dist,ctx,name,cap){
+
 
     var distTable = d3.map(dist, function(d){return d.id;});
     var minDist = d3.min(dist, function(d){return d.dist}),
         maxDist = d3.max(dist, function(d){return d.dist});
+    var lineMetadata = metadata[name];
 
     //Name of the line
     if(!(name=="Red-A" || name=="Red-B")){
@@ -166,6 +175,8 @@ function draw(top,bottom,dist,ctx,name){
             .attr('class','important')
             .attr('y',height-60);
     }
+
+    //Generate rectangles for each station
 
     var line = d3.svg.area()
         .x(function(d){
@@ -198,6 +209,49 @@ function draw(top,bottom,dist,ctx,name){
         .attr('class','area right')
         .datum(bottom)
         .attr('d',line2);
+
+    //Generate capacity areas
+    var capArea = d3.svg.area()
+        .defined(function(d){
+            return d.id != "";
+        })
+        .x(function(d){
+            //var capPerCar = d.vol.get(currentTime);
+            var capPerCar = carCap[name];
+            return scaleXLeft(capPerCar * lineMetadata.get("tph-l").get(currentTime) * lineMetadata.get("avg-consist").get(currentTime));
+        })
+        .y(function(d){
+            var meta = distTable.get(d.id);
+            return scaleY(meta.dist);
+        })
+        .x0(wPerLine/2)
+        .interpolate('step');
+
+    var capAreaLeft = d3.select(ctx).append('path')
+        .attr('class','cap-area left')
+        .datum(cap)
+        .attr('d',capArea);
+
+    var capArea2 = d3.svg.area()
+        .defined(function(d){
+            return d.id != "";
+        })
+        .x(function(d){
+            //var capPerCar = d.vol.get(currentTime);
+            var capPerCar = carCap[name];
+            return scaleXRight(capPerCar * lineMetadata.get("tph-r").get(currentTime) * lineMetadata.get("avg-consist").get(currentTime));
+        })
+        .y(function(d){
+            var meta = distTable.get(d.id);
+            return scaleY(meta.dist);
+        })
+        .x0(wPerLine/2)
+        .interpolate('step');
+
+    var capAreaRight = d3.select(ctx).append('path')
+        .attr('class','cap-area right')
+        .datum(cap)
+        .attr('d',capArea2);
 
     //Center line
     d3.select(ctx).append('line')
@@ -237,22 +291,26 @@ function draw(top,bottom,dist,ctx,name){
             .x(function(d){
                 return scaleXLeft(d.vol.get(currentTime));
             })
-            .y(function(d){
-                var meta = distTable.get(d.id);
-                return scaleY(meta.dist);
-            })
-            .x0(wPerLine/2)
-            .interpolate('step');
+            .x0(wPerLine/2);
         line2
             .x(function(d){
                 return scaleXRight(d.vol.get(currentTime));
             })
-            .y(function(d){
-                var meta = distTable.get(d.id);
-                return scaleY(meta.dist);
+            .x0(wPerLine/2);
+        capArea
+            .x(function(d){
+                //var capPerCar = d.vol.get(currentTime);
+                var capPerCar = carCap[name];
+                return scaleXLeft(capPerCar * lineMetadata.get("tph-l").get(currentTime) * lineMetadata.get("avg-consist").get(currentTime));
             })
-            .x0(wPerLine/2)
-            .interpolate('step');
+            .x0(wPerLine/2);
+        capArea2
+            .x(function(d){
+                //var capPerCar = d.vol.get(currentTime);
+                var capPerCar = carCap[name];
+                return scaleXRight(capPerCar * lineMetadata.get("tph-r").get(currentTime) * lineMetadata.get("avg-consist").get(currentTime));
+            })
+            .x0(wPerLine/2);
 
         areaLeft
             .transition()
@@ -260,6 +318,12 @@ function draw(top,bottom,dist,ctx,name){
         areaRight
             .transition()
             .attr('d',line2);
+        capAreaLeft
+            .transition()
+            .attr('d',capArea);
+        capAreaRight
+            .transition()
+            .attr('d',capArea2);
 
     });
 
@@ -273,12 +337,20 @@ function parseDist(d){
     }
 }
 
-function parseMeta(d){
-    if(d["Station"]=="tph-nb"||d["Station"]=="tph-sb"||d["Station"]=="avg-consist"){
-        metaDataOl.push(parseVolume(d));
-        return;
-    }else{
-        return parseVolume(d);
+function parseMeta(line){
+    metadata[line] = d3.map();
+
+    return function(d){
+
+        if(d["Station"]=="tph-l"||d["Station"]=="tph-r"||d["Station"]=="avg-consist"){
+            metadata[line].set(d["Station"], (parseVolume(d)).vol);
+        }
+        else if(d["Station"===""]){
+            return;
+        }else{
+            return parseVolume(d);
+        }
+
     }
 
 }
