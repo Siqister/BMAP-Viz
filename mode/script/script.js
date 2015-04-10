@@ -21,7 +21,8 @@ var baseline;
 var pie = d3.layout.pie()
     .value(function(d){
         return d.share;
-    });
+    })
+    .sort(null);
 var arc = d3.svg.arc()
     .innerRadius(size/2-115)
     .outerRadius(size/2-105);
