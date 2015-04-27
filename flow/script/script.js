@@ -17,13 +17,13 @@ var nodes, links = [], map = d3.map();
 
 var sankey = d3.sankey()
     .nodeWidth(20)
-    .nodePadding(18)
+    .nodePadding(45)
     .size([width,height]);
 var path = sankey.link();
 
 
 /* Acquire and parse data */
-d3.csv('data/in_out_boston_by_mode.csv', parse, dataLoaded);
+d3.csv('data/in_out_boston_by_mode_2.csv', parse, dataLoaded);
 
 function dataLoaded(err,rows){
 

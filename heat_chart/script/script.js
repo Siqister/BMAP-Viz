@@ -84,6 +84,15 @@ function draw(neighborhoods){
                 console.log(t);
             })
 
+        //highlight subneighborhoods
+        tractNode
+            .append('text')
+            .text(function(t){
+                return t.subhood;
+            })
+            .attr('x',width)
+            .style('font-size','8px');
+
         //draw <rect> for each timeshare
         tractNode.each(function(t){
             var timeShares = d3.select(this)
@@ -100,7 +109,11 @@ function draw(neighborhoods){
                 .style('fill',function(s){
                     //split can be between 0 and 30%;
                     return colorScale(s);
-                });
+                })
+                .style('stroke',function(s){
+                    if(t.subhood) return "blue";
+                    else return null;
+                })
             d3.select(this)
                 .selectAll('.time-share-text')
                 .data(t.split)
@@ -114,12 +127,12 @@ function draw(neighborhoods){
                     return format(s);
                 })
                 .style('font-size','4px')
-            timeShares.sort(function(a,b){
+            /*timeShares.sort(function(a,b){
                 return b-a;
             });
             d3.select(timeShares[0][0])
                 .style('stroke','blue')
-                .style('stroke-width','1px');
+                .style('stroke-width','1px');*/
         })
     })
 }
@@ -130,12 +143,14 @@ function parse(d){
     newRow.geoid = d["GEO.id"];
     newRow.total = +d.HD01_VD01;
     newRow.split = [];
+    newRow.subhood = d["Sub-Neighborhood"]?d["Sub-Neighborhood"]:undefined;
 
     delete d.Neighborhood;
     delete d["GEO.id"];
     delete d.HD01_VD01;
     delete d["GEO.id2"];
     delete d["GEO.display-label"];
+    delete d["Sub-Neighborhood"];
 
     for(var key in d){
         if(newRow.total != 0){
