@@ -12,11 +12,11 @@ var canvas = d3.select('.canvas')
     .attr('transform','translate('+margin.l+','+margin.t+')');
 
 //scales
-var scaleX = d3.scale.linear().domain([0,23]).range([0,width]),
-    scaleY = d3.scale.linear().domain([-4,4]).range([height,0])
+var scaleX = d3.scale.linear().domain([6,23]).range([0,width]),
+    scaleY = d3.scale.linear().domain([.5,-.5]).range([height,0])
 
 //Metadata global
-d3.csv('data/bus-running-time.csv',parse,function(err,data){
+d3.csv('data/bus-running-time-v-2.csv',parse,function(err,data){
     console.log(data);
 
     var line = d3.svg.line()
@@ -35,11 +35,11 @@ d3.csv('data/bus-running-time.csv',parse,function(err,data){
         .attr('class','route')
         .style('fill','none')
         .style('stroke',function(d){
-            if(d.type=='k') return 'red';
+            if(d.type=='K') return 'red';
             else return "blue";
         })
         .style('stroke-opacity',function(d){
-            if(d.route == 'avg') return 1;
+            if(d.route == 'AVG') return 1;
             else return .1;
         })
         .style('stroke-width','2px')
@@ -68,10 +68,13 @@ d3.csv('data/bus-running-time.csv',parse,function(err,data){
 function parse(d){
     var times = [];
 
-    var route = d.route,
-        type = d.type;
-    delete d.route;
-    delete d.type;
+    var route = d.Route,
+        type = d['KEY/NONKEY'];
+    delete d.Route;
+    delete d['KEY/NONKEY'];
+    delete d['Average of scheduledrunning'];
+    delete d['MIN'];
+    delete d['#ofSamples'];
 
     for(key in d){
         times.push({
