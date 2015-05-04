@@ -35,14 +35,18 @@ d3.csv('data/bus-running-time-v-2.csv',parse,function(err,data){
         .attr('class','route')
         .style('fill','none')
         .style('stroke',function(d){
-            if(d.type=='K') return 'red';
-            else return "blue";
+            if(d.type=='K'){return 'red';}
+            else if(d.route == "77" || d.route == "22"){ return 'black';}
+            else{ return "blue";}
         })
         .style('stroke-opacity',function(d){
-            if(d.route == 'AVG') return 1;
+            if(d.route == 'AVG' || d.route == "77" || d.route == "22") return 1;
             else return .1;
         })
         .style('stroke-width','2px')
+        .on('click',function(d){
+            console.log(d.route);
+        })
 
     //axis
     var axisX = d3.svg.axis()
