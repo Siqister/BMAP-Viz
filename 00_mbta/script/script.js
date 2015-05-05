@@ -107,12 +107,12 @@ function onTimeChange(d){
 
 
 //TODO: junky animation
-var i = 8;
+/*var i = 8;
 setInterval(function(){
     onTimeChange(i);
     i++;
     if(i>23){ i = 0;}
-},200);
+},200);*/
 
 
 //Add <g> element for each line

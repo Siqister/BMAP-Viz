@@ -1,10 +1,3 @@
-/*Start by setting up the canvas */
-var margin = {t:100,r:150,b:50,l:200};
-var width = $('.canvas').width() - margin.r - margin.l,
-    height = $('.canvas').height() - margin.t - margin.b;
-
-var commuteTime = d3.select('#commute-time');
-
 //Global data variables
 //TODO: trip totals actually include cities in Suffolk that are not Boston, but ok for now
 var cityTripTotal = 0,
@@ -12,24 +5,24 @@ var cityTripTotal = 0,
     tractMetadata = d3.map();
 
 //Global visual variables
+var margin = {t:120,r:150,b:80,l:200};
+
 var yPadding = 5,
-    cellWidth = width/8,
     scaleY = d3.scale.linear(),
-    scaleColor = d3.scale.linear().domain([0,.2]).range(['white','black']);
+    scaleColor = d3.scale.linear().domain([0,.4]).range(['white','red']);
 var fisheye = d3.fisheye.circular()
-      .radius(60);
+    .radius(60);
+
 var format = d3.format('%.1')
 
 //map projections
-var projection = d3.geo.conicConformal()
-    .rotate([0,0])
-    .center([-71.0636,42.3581])
-    .scale(240000)
-    .translate([width/2,height/2])
-    .precision(.1)
+var projection = d3.geo.mercator();
 
 var path = d3.geo.path()
     .projection(projection);
+
+//global events
+var dispatch = d3.dispatch('chartHover','mapHover','out');
 
 
 
@@ -39,25 +32,38 @@ d3.csv("data/tract_metadata.csv", parseMeta, function(err,meta){
     queue()
         .defer(d3.csv, "data/ACS_13_5YR_B08303_with_ann.csv", parseTime)
         .defer(d3.csv, "data/ACS_13_5YR_B08301_with_ann.csv", parseMode)
+        .defer(d3.json, "data/tracts.geojson")
+        .defer(d3.json, "data/neighborhoods.geojson")
         .await(dataLoaded);
 })
 
-function dataLoaded(err, time, mode){
+function dataLoaded(err, time, mode, tractGeo, hoodGeo){
 
 
-    drawTimeChart(time,commuteTime);
+    drawTimeChart(time,d3.select('#commute-time'));
+    drawMap(tractGeo,hoodGeo,time,d3.select('#choropleth'));
 }
 
 function drawTimeChart(tracts,ctx){
+    //visual variables specific to this viz
+    var width = $('#commute-time').width() - margin.r - margin.l,
+        height = $('#commute-time').height() - margin.t - margin.b;
+    var cellWidth = width/8;
 
     var canvas = ctx
         .append('svg')
         .attr('width',width+margin.r+margin.l)
         .attr('height',height + margin.t + margin.b)
         .append('g')
-        .attr('class','canvas')
+        .attr('class','canvas chart')
         .attr('transform','translate('+margin.l+','+margin.t+')');
     var tooltip = ctx.select('.custom-tooltip');
+    var visualTarget = canvas.append('rect')
+        .attr('class','target')
+        .style('fill','none')
+        .style('stroke-width','1.5px')
+        .style('stroke','#0092c8')
+        .style('opacity',0)
 
     //Nest tracts by neighborhoods
     //And remove those in HI
@@ -93,7 +99,7 @@ function drawTimeChart(tracts,ctx){
     var node = canvas.selectAll('.node')
         .data(chartLayout(hoods),function(d){return d.key})
         .enter()
-        .append('g')
+        .insert('g','.target')
         .attr('class',function(d){
             if(d.depth == 0){ return 'node share'}
             else if(d.depth == 1){return 'node tract'}
@@ -137,6 +143,19 @@ function drawTimeChart(tracts,ctx){
     })
 
     function onShareEnter(s){
+        dispatch.chartHover(s); //globally broadcast the id of the tract
+
+        //position visual target
+        visualTarget
+            .attr('x',s.x-5)
+            .attr('y',s.y-5)
+            .attr('width',s.dx+10)
+            .attr('height',s.dy+10)
+            .transition()
+            .style('opacity',1)
+
+        tooltip.selectAll('p')
+            .remove();
         tooltip
             .transition()
             .style('opacity',1);
@@ -154,23 +173,65 @@ function drawTimeChart(tracts,ctx){
             .html((function(){
                 return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
             })())
-
-
     }
-    function onShareHover(s){
+    function onShareHover(){
         var xy = d3.mouse(ctx.node());
         tooltip
             .style('left',xy[0]-90+'px')
-            .style('bottom',(height+150-xy[1])+'px');
+            .style('bottom',(height+250-xy[1])+'px');
     }
-    function onShareOut(s){
+    function onShareOut(){
+        dispatch.out();
+    }
+
+    dispatch.on('mapHover',function(tractId,tIndex){
+        var s;
+        shareNode.filter(function(d){
+            return d.key == tractId+'-'+tIndex;
+            })
+            .each(function(d){
+                s = d;
+            });
+
+        visualTarget
+            .attr('x',s.x-5)
+            .attr('y',s.y-5)
+            .attr('width',s.dx+10)
+            .attr('height',s.dy+10)
+            .transition()
+            .style('opacity',1)
+
+        tooltip.selectAll('p')
+            .remove();        
+        tooltip
+            .transition()
+            .style('opacity',1);
+        tooltip
+            .style('left',s.x+s.dx/2+margin.l-90+'px')
+            .style('bottom',(height+margin.b-s.y+50)+'px');
+        tooltip
+            .append('p')
+            .html((function(){
+                if(s.subNeighborhood){
+                    return '<span class="data">'+ (s.displayName.split(','))[0] + ' </span>('+s.subNeighborhood+', '+s.neighborhood+')';
+                }else{
+                    return '<span class="data">'+ (s.displayName.split(','))[0] + ' </span>('+s.neighborhood+')';
+                }
+            })())
+        tooltip
+            .append('p')
+            .html((function(){
+                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
+            })());
+    })
+    dispatch.on('out.chart',function(){
         tooltip
             .transition()
             .style('opacity',0);
-
-        tooltip.selectAll('p')
-            .remove();
-    }
+        visualTarget
+            .transition()
+            .style('opacity',0);
+    })
 
     function chartLayout(hoods){
         //a modified hierarchical layout
@@ -200,7 +261,6 @@ function drawTimeChart(tracts,ctx){
                     s.dx = cellWidth;
                     s.dy = scaleY(t.total);
                     s.depth = 0;
-                    s.key = t.geoid + '-' + i;
 
                     positions.push(s);
 
@@ -215,6 +275,176 @@ function drawTimeChart(tracts,ctx){
 
         return positions;
     }
+
+}
+
+function drawMap(tractGeo,hoodGeo,data,ctx){
+    var width = $('#choropleth').width() - margin.r - margin.l,
+        height = $('#choropleth').height() - margin.t - margin.b;
+
+    projection
+        .center([-71.095190,42.314796])
+        .scale(170000)
+        .translate([width/2,height/2])
+        .precision(.1)
+
+    var canvas = ctx
+        .append('svg')
+        .attr('width',width+margin.r+margin.l)
+        .attr('height',height + margin.t + margin.b)
+        .append('g')
+        .attr('class','canvas map')
+        .attr('transform','translate('+margin.l+','+margin.t+')');
+    var tooltip = ctx.select('.custom-tooltip');
+    var visualTarget = canvas.append('circle')
+        .attr('class','target')
+        .attr('r',4)
+        .style('fill','#0092c8')
+        .style('opacity',0);
+
+    //clean up data
+    var _data = d3.map(data, function(d){return d.geoid2;})
+
+    //variable for displaying current time share
+    var tIndex = 0;
+
+    //console.log(geo);
+    var tracts = canvas.selectAll('.tract')
+        .data(tractGeo.features, function(d){return d.properties.GEOID10;});
+    var tractsEnter = tracts
+        .enter()
+        .insert('path','.target')
+        .attr('class','tract')
+        .attr('d',path)
+        .on('mouseenter',onTractEnter)
+        .on('mousemove',onTractMove)
+        .on('mouseleave',onTractLeave);
+    tracts
+        .style('fill',function(d){
+            var t = _data.get(d.properties.GEOID10);
+            if(!t){return 'rgb(50,50,50)';}
+            return scaleColor(t.timeShares[tIndex].share);
+        })
+
+    //non-interactive neighborhood overlay
+    var hoods = canvas.selectAll('.hood')
+        .data(hoodGeo.features)
+        .enter()
+        .insert('path','target')
+        .attr('class','hood')
+        .attr('d',path)
+        .style('fill','none')
+        .style('stroke','rgb(245,245,245)')
+        .style('stroke-width','1.5px');
+
+    function onTractEnter(d){
+        //Get data, populate tooltip
+        var t = _data.get(d.properties.GEOID10); //tract csv data
+        if(!t){return;}
+
+        var xy = path.centroid(d);
+        console.log(xy);
+
+        //emit event back to chart; d -> geojson feature data
+        dispatch.mapHover(d.properties.GEOID10,tIndex);
+
+        var s = t.timeShares[tIndex];
+
+        tooltip.selectAll('p')
+            .remove();
+        tooltip
+            .transition()
+            .style('opacity',1);
+        tooltip
+            .append('p')
+            .html((function(){
+                if(s.subNeighborhood){
+                    return '<span class="data">'+ (s.displayName.split(','))[0] + ' </span>('+s.subNeighborhood+', '+s.neighborhood+')';
+                }else{
+                    return '<span class="data">'+ (s.displayName.split(','))[0] + ' </span>('+s.neighborhood+')';
+                }
+            })())
+        tooltip
+            .append('p')
+            .html((function(){
+                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
+            })());
+        visualTarget
+            .attr('cx',xy[0])
+            .attr('cy',xy[1])
+            .transition()
+            .style('opacity',1)
+
+    }
+    function onTractMove(d){
+        var xy = d3.mouse(ctx.node());
+        tooltip
+            .style('left',xy[0]-90+'px')
+            .style('bottom',(height+250-xy[1])+'px');
+    }
+    function onTractLeave(d){
+        dispatch.out(); //this takes care of both map and chart
+    }
+
+    dispatch.on('chartHover',function(s){
+        //update the current time share to display
+        tIndex = s.tIndex;
+        tracts
+            .transition()
+            .style('fill',function(d){
+                var t = _data.get(d.properties.GEOID10);
+                if(!t){return 'rgb(50,50,50)';}
+                return scaleColor(t.timeShares[tIndex].share);
+            })
+
+        var xy;
+        var target = tracts.filter(function(t){
+                return t.properties.GEOID10 == s.geoid2;
+            })
+            .each(function(t){
+                xy = path.centroid(t);
+            })
+
+        //display info in tooltip
+        tooltip.selectAll('p')
+            .remove();        
+        tooltip
+            .transition()
+            .style('opacity',1);
+        tooltip
+            .style('left',xy[0]+margin.l-90+'px')
+            .style('bottom',(height+margin.b-xy[1]+50)+'px');
+        tooltip
+            .append('p')
+            .html((function(){
+                if(s.subNeighborhood){
+                    return '<span class="data">'+ (s.displayName.split(','))[0] + ' </span>('+s.subNeighborhood+', '+s.neighborhood+')';
+                }else{
+                    return '<span class="data">'+ (s.displayName.split(','))[0] + ' </span>('+s.neighborhood+')';
+                }
+            })())
+        tooltip
+            .append('p')
+            .html((function(){
+                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
+            })())
+
+        visualTarget
+            .attr('cx',xy[0])
+            .attr('cy',xy[1])
+            .transition()
+            .style('opacity',1)
+
+
+    });
+    dispatch.on('out.map',function(){
+        tooltip
+            .transition()
+            .style('opacity',0);
+        visualTarget
+            .transition()
+            .style('opacity',0);
+    })
 
 }
 
@@ -244,17 +474,23 @@ function parseTime(d){
     delete d['GEO.id2'];
     delete d.Total;
 
+    var tIndex = 0;
     for(var key in d){
         if(newRow.total != 0){
             newRow.timeShares.push({
                 displayName: newRow.displayName,
                 neighborhood: newRow.neighborhood,
                 subNeighborhood: newRow.subNeighborhood,
+                geoid2:newRow.geoid2,
+                key:newRow.geoid2+'-'+tIndex,
                 time:key,
+                tIndex:tIndex,
                 trip:+d[key],
                 share:+d[key]/newRow.total
             })
         }
+
+        tIndex += 1;
     }
 
     cityTripTotal += newRow.total;
