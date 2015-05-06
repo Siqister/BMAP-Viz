@@ -24,7 +24,10 @@ var path = d3.geo.path()
 //global events
 var dispatch = d3.dispatch('chartHover','mapHover','out');
 
-
+//On window load...
+    $(window).on('load',function(e){
+        $('#intro').modal();
+    });
 
 
 //Load data
@@ -35,13 +38,20 @@ d3.csv("data/tract_metadata.csv", parseMeta, function(err,meta){
         .defer(d3.json, "data/tracts.geojson")
         .defer(d3.json, "data/neighborhoods.geojson")
         .await(dataLoaded);
+
+    //Arm global menu bar
+    $('.meta .refresh').on('click',function(e){
+        e.preventDefault();
+        location.reload();
+    });
 })
 
 function dataLoaded(err, time, mode, tractGeo, hoodGeo){
 
-
     drawTimeChart(time,d3.select('#commute-time'));
     drawMap(tractGeo,hoodGeo,time,d3.select('#choropleth'));
+
+    $('.canvas').removeClass('loading');
 }
 
 function drawTimeChart(tracts,ctx){
@@ -64,6 +74,18 @@ function drawTimeChart(tracts,ctx){
         .style('stroke-width','1.5px')
         .style('stroke','#0092c8')
         .style('opacity',0)
+
+    var rangeLabels = canvas.selectAll('.range-label')
+        .data(tracts[0].timeShares)
+        .enter()
+        .append('text')
+        .attr('class','range-label')
+        .text(function(d){return d.time})
+        .attr('transform',function(d,i){
+            var x = i*cellWidth + cellWidth/2;
+            return 'translate('+x+',0)rotate(-45)'
+        })
+        .attr('dy',-3);
 
     //Nest tracts by neighborhoods
     //And remove those in HI
@@ -97,8 +119,8 @@ function drawTimeChart(tracts,ctx){
 
     //Start drawings
     var node = canvas.selectAll('.node')
-        .data(chartLayout(hoods),function(d){return d.key})
-        .enter()
+        .data(chartLayout(hoods),function(d){return d.key});
+    var nodeEnter = node.enter()
         .insert('g','.target')
         .attr('class',function(d){
             if(d.depth == 0){ return 'node share'}
@@ -108,7 +130,7 @@ function drawTimeChart(tracts,ctx){
         .attr('transform',function(d){
             return 'translate('+d.x+','+d.y+')';
         });
-    node.filter(function(d){return d.depth == 2; })
+    nodeEnter.filter(function(d){return d.depth == 2; })
         .append('text')
         .text(function(d){
             return d.key;
@@ -116,16 +138,21 @@ function drawTimeChart(tracts,ctx){
         .attr('text-anchor','end')
         .attr('dy',10)
         .attr('dx',-5);
-    var shareNode = node.filter(function(d){return d.depth == 0; })
+    var shareNode = nodeEnter.filter(function(d){return d.depth == 0; })
         .append('rect')
-        .attr('width',function(d){return d.dx;})
-        .attr('height',function(d){return d.dy;})
-        .style('fill',function(d){
-            return scaleColor(d.share);
-        })
         .on('mouseover',onShareEnter)
         .on('mousemove',onShareHover)
-        .on('mouseout',onShareOut);
+        .on('mouseout',onShareOut)
+        .attr('width',0)
+        .attr('height',function(d){return d.dy;})
+        .style('fill','white');
+    shareNode
+        .transition()
+        .duration(400)
+        .attr('width',function(d){return d.dx;})
+        .style('fill',function(d){
+            return scaleColor(d.share);
+        });
 
     canvas.on('mousemove',function(){
         fisheye.focus(d3.mouse(this));
@@ -153,6 +180,16 @@ function drawTimeChart(tracts,ctx){
             .attr('height',s.dy+10)
             .transition()
             .style('opacity',1)
+
+        //highlight range label
+        rangeLabels
+            .style('font-weight','normal')
+            .style('fill',null)
+            .filter(function(d){
+                return d.tIndex == s.tIndex;
+            })
+            .style('font-weight','bold')
+            .style('fill','black');
 
         tooltip.selectAll('p')
             .remove();
@@ -186,7 +223,7 @@ function drawTimeChart(tracts,ctx){
 
     dispatch.on('mapHover',function(tractId,tIndex){
         var s;
-        shareNode.filter(function(d){
+        node.filter(function(d){
             return d.key == tractId+'-'+tIndex;
             })
             .each(function(d){
@@ -279,6 +316,7 @@ function drawTimeChart(tracts,ctx){
 }
 
 function drawMap(tractGeo,hoodGeo,data,ctx){
+    //Update width, height and projection, append all static elements
     var width = $('#choropleth').width() - margin.r - margin.l,
         height = $('#choropleth').height() - margin.t - margin.b;
 
@@ -296,19 +334,60 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
         .attr('class','canvas map')
         .attr('transform','translate('+margin.l+','+margin.t+')');
     var tooltip = ctx.select('.custom-tooltip');
-    var visualTarget = canvas.append('circle')
+    var visualTarget = canvas.append('g')
         .attr('class','target')
-        .attr('r',4)
-        .style('fill','#0092c8')
         .style('opacity',0);
+    visualTarget.append('svg:image')
+        .attr('xlink:href','assets/pin-02.svg')
+        .attr('width',16)
+        .attr('height',30)
+        .attr('x',-8)
+        .attr('y',-30);
+    var metainfo = ctx.select('.canvas-meta').select('.cat');
+    var legend = ctx.select('.canvas-meta')
+        .append('svg')
+        .attr('width',width/2)
+        .attr('height',30);
+    legend.selectAll('.legend-cat')
+        .data([0,.05,.1,.15,.2])
+        .enter()
+        .append('rect')
+        .attr('x',function(d,i){
+            return i*width/20
+        })
+        .attr('width',width/20)
+        .attr('height',4)
+        .style('fill',function(d){
+            return scaleColor(d);
+        });
+    legend.append('text')
+        .text('0%')
+        .attr('y',20);
+    legend.append('text')
+        .text('20%')
+        .attr('y',20)
+        .attr('x',width/4)
+        .attr('text-anchor','end')
+    legend
+        .append('rect')
+        .attr('width',width/20)
+        .attr('height',4)
+        .style('fill','rgb(50,50,50)')
+        .attr('x',width*6/20);
+    legend.append('text')
+        .text('No data')
+        .attr('y',20)
+        .attr('x',width*6/20);
+
+
 
     //clean up data
     var _data = d3.map(data, function(d){return d.geoid2;})
 
-    //variable for displaying current time share
+    //variable for displaying current time share, by default showing "under 5"
     var tIndex = 0;
 
-    //console.log(geo);
+    //Draw tracts
     var tracts = canvas.selectAll('.tract')
         .data(tractGeo.features, function(d){return d.properties.GEOID10;});
     var tractsEnter = tracts
@@ -330,7 +409,7 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
     var hoods = canvas.selectAll('.hood')
         .data(hoodGeo.features)
         .enter()
-        .insert('path','target')
+        .insert('path','.target')
         .attr('class','hood')
         .attr('d',path)
         .style('fill','none')
@@ -343,13 +422,13 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
         if(!t){return;}
 
         var xy = path.centroid(d);
-        console.log(xy);
 
         //emit event back to chart; d -> geojson feature data
         dispatch.mapHover(d.properties.GEOID10,tIndex);
 
         var s = t.timeShares[tIndex];
 
+        //Populate tooltip content
         tooltip.selectAll('p')
             .remove();
         tooltip
@@ -369,9 +448,10 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
             .html((function(){
                 return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
             })());
+
+        //Move visual target
         visualTarget
-            .attr('cx',xy[0])
-            .attr('cy',xy[1])
+            .attr('transform','translate('+xy[0]+','+xy[1]+')')
             .transition()
             .style('opacity',1)
 
@@ -387,8 +467,11 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
     }
 
     dispatch.on('chartHover',function(s){
-        //update the current time share to display
+        //update the current time share to display, would also need to update text
         tIndex = s.tIndex;
+        metainfo.html(s.time);
+
+
         tracts
             .transition()
             .style('fill',function(d){
@@ -429,9 +512,9 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
                 return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
             })())
 
+        //Move visual target
         visualTarget
-            .attr('cx',xy[0])
-            .attr('cy',xy[1])
+            .attr('transform','translate('+xy[0]+','+xy[1]+')')
             .transition()
             .style('opacity',1)
 

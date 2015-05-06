@@ -18,12 +18,37 @@ html,body{
     margin:0;
     width:100%;
 }
+.container .meta{
+	position:absolute;
+	width:100%;
+	height:50px;
+	background-color:rgb(240,240,240);
+	background:rgb(240,240,240) url('./assets/logo-03.png') no-repeat 140px 5px;
+	z-index:999;
+	padding:5px 200px;
+}
+	.container .meta .btn{
+		width:40px;
+		height:40px;
+		border-radius:20px;
+		margin-left:5px;
+	}
+	.container .meta .info .glyphicon{
+		font-size:20px;
+		top:3px;
+		left:-3px;
+	}
 .container .canvas{
 	width:40%;
 	height: 100%;
 	position: relative;
 	float:left;
+	background:none;
 }
+	.container .loading{
+		background:url('./assets/spinner.gif') no-repeat center center;
+		background-size:50px 50px;
+	}
 	.container #choropleth{
 		width:50%;
 	}
@@ -36,6 +61,9 @@ body{
 	line-height:120%;
     color:#fff;
 }
+.modal{
+	color:rgb(80,80,80);
+}
 h1{
 	font-size: 2em;
 	margin: 30px 0 30px;
@@ -44,45 +72,63 @@ h2{
 	font-size:1.5em;
 	margin: 0 0 20px;
 }
+h3{
+	font-size:1.5em;
+}
+h4{
+	font-size:1.2em;
+	margin: 0 0 15px;
+}
 p{
     margin: 0 0 10px;
 }
 
-/*------------tooltip-------------*/
+/*------------modal-------------*/
+.modal img{
+	width:100%;
+	height:auto;
+	margin:5px 0 15px;
+}
 
 /*-----------control--------------*/
-.control{
-	position:relative;
-	top:100px;
-	margin:auto;
-	z-index:999;
-}
-.canvas{
-	position:absolute;
-	
-}
 .custom-tooltip{
 	position:absolute;
 	width:180px;
 	padding:15px 10px 10px;
-	background:#0092c8;
+	background:#467082;
 	color:rgb(245,245,245);
 	z-index:1000;
-	left:0;
 	opacity:0;
+	pointer-events:none;
 }
 	.custom-tooltip .data{
 		font-weight:bold;
 	}
 /*------------svg-----------------*/
 .canvas text{
-	fill:rgb(80,80,80);
+	fill:rgb(120,120,120);
 	font-size:14px;
 }
+	.canvas .range-label{
+		font-size:12px;
+	}
+.canvas .canvas-meta{
+	position:absolute;
+	top:120px;
+	left:100px;
+	width:50%;
+	color:rgb(80,80,80);
+}
+	.canvas .canvas-meta .cat{
+		font-weight:bold;
+		color:black;
+	}
 .canvas .map .tract{
 	stroke:none;
 }
-	.canvas .map .highlight{
-		stroke:black;
-		stroke-width:2px;
-	}
+.canvas .map .hood{
+	pointer-events:none;
+}
+.canvas .target{
+	pointer-events:none;
+}

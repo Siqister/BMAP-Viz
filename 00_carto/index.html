@@ -2,17 +2,50 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>Non-Work Trips Mode Split</title>
+		<title>Commute Times</title>
 		<link href='http://fonts.googleapis.com/css?family=Roboto+Condensed:400,700' rel='stylesheet' type='text/css'>
 		<link href="bower_components\bootstrap\dist\css\bootstrap.min.css" rel="stylesheet"/>
 		<link href="style.css" rel="stylesheet"/>
 	</head>
 	<body>
+		<div class="modal fade" id="intro">
+		  <div class="modal-dialog">
+		    <div class="modal-content">
+		      <div class="modal-header">
+		        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+		        <h3 class="modal-title">How Long is Your Commute?</h4>
+		      </div>
+		      <div class="modal-body">
+		        <p>Hover over this graphic to learn how long it takes people living in different areas of Boston to get to work (and who has the extreme commutes).</p>
+		        <h4><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> What are those red rectangles?</h4>
+		        <p>Each row of rectangles represents a single census tract (made up of many street blocks). Within this row, each rectangle represents a group of people with a certain commute time. The darker the color, the more people belong to this group.</p>
+		        <img src="assets/legend-img-04.png" />
+		        <p>These rows/census tracts are grouped together by neighborhood.</p>
+		        <img src="assets/legend-img-05.png" />
+		        <h4><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> Where is this data from?</h4>
+		        <p>American Community Survey 2013 5-year estimate</p>
+		      </div>
+		      <div class="modal-footer">
+		        <button type="button" class="btn btn-default" data-dismiss="modal">Got it!</button>
+		      </div>
+		    </div><!-- /.modal-content -->
+		  </div><!-- /.modal-dialog -->
+		</div><!-- /.modal -->
+
 		<div class="container">
-            <div class="canvas" id="commute-time">
+			<div class="meta">
+				<a class="btn btn-default info pull-right" href="#" role="button" data-toggle="modal" data-target="#intro">
+					<span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+				</a>		
+				<a class="btn btn-default info pull-right refresh" href="#" role="button"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></a>				
+			</div>
+            <div class="canvas loading" id="commute-time">
             	<div class="custom-tooltip"></div>
             </div>
-            <div class="canvas" id="choropleth">
+            <div class="canvas loading" id="choropleth">
+            	<div class="canvas-meta">
+            		<h2 class="canvas-title">% of Workers in Each Census Tract with a Commute Time in the <span class="cat">Less than 5</span> Minute Range</h2>
+            	</div>
             	<div class="custom-tooltip"></div>
             </div>
         </div><!--.container-->
@@ -20,6 +53,7 @@
 
 		<!-- Scripts -->
 		<script src="script/lib/jquery/jquery-1.11.1.min.js"></script>
+		<script src="bower_components\bootstrap\js\modal.js"></script>
 		<script src="script/lib/queue/queue.min.js"></script>
 		<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 		<script src="script\lib\d3-plugins\fisheye\fisheye.js"></script>
