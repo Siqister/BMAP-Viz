@@ -2,7 +2,15 @@
 //TODO: trip totals actually include cities in Suffolk that are not Boston, but ok for now
 var cityTripTotal = 0,
     cityWorkerTotal = 0, //cityWorkerTotal = cityTripTotal + work from home
+    cityWorkerByMode = d3.map();
     tractMetadata = d3.map();
+
+for(var mIndex = 0; mIndex < 7; mIndex++){
+    cityWorkerByMode.set(mIndex,{
+        mIndex:mIndex,
+        total:0
+    });
+}
 
 //Global visual variables
 var margin = {t:120,r:150,b:80,l:200};
@@ -10,6 +18,8 @@ var margin = {t:120,r:150,b:80,l:200};
 var yPadding = 5,
     scaleY = d3.scale.linear(),
     scaleColor = d3.scale.ordinal().domain(d3.range(7)).range(['#d3d1e9','#9abcc3','#1c9ad6','#00b26b','#2fa148','#9ed089','#ef4723']);
+    scaleColorByLq = d3.scale.linear().domain([0,1,3]).range(['#03afeb','white','red']);
+    scaleThreshold = d3.scale.threshold().domain([.5,.75,.95,1.05,1.25,1.5]).range(['signficantly below','below','slightly below','similar to','slightly above','above','significantly above']);
 var fisheye = d3.fisheye.circular()
     .radius(60);
 
@@ -48,10 +58,13 @@ d3.csv("data/tract_metadata.csv", parseMeta, function(err,meta){
 
 function dataLoaded(err, time, mode, tractGeo, hoodGeo){
 
-    console.log('error',err);
-    //drawTimeChart(time,d3.select('#chart'));
+    //populate city wide modal split
+    cityWorkerByMode.forEach(function(mIndex,entry){
+        entry.share = entry.total/cityWorkerTotal;
+    });
+
     drawModeChart(mode,d3.select('#chart'));
-    drawMap(tractGeo,hoodGeo,time,d3.select('#choropleth'));
+    drawMap(tractGeo,hoodGeo,mode,d3.select('#choropleth'));
 
     $('.canvas').removeClass('loading');
 }
@@ -60,7 +73,7 @@ function drawModeChart(mode,ctx){
     //visual variables specific to this viz
     var width = $('#chart').width() - margin.r - margin.l,
         height = $('#chart').height() - margin.t - margin.b;
-    var scaleX = d3.scale.linear().domain([0,1]).range([0,width*.7]); //x-scale, 100% adds up to 60% of chart width
+    var scaleX = d3.scale.linear().domain([0,1]).range([0,width*.8]); //x-scale, 100% adds up to 60% of chart width
     var canvas = ctx
         .append('svg')
         .attr('width',width+margin.r+margin.l)
@@ -73,7 +86,7 @@ function drawModeChart(mode,ctx){
         .attr('class','target')
         .style('fill','none')
         .style('stroke-width','1.5px')
-        .style('stroke','#0092c8')
+        .style('stroke','white')
         .style('opacity',0)
 
     //Nest tracts by neighborhoods
@@ -191,7 +204,7 @@ function drawModeChart(mode,ctx){
     function onShareHover(){
         var xy = d3.mouse(ctx.node());
         tooltip
-            .style('left',xy[0]-90+'px')
+            .style('left',xy[0]-100+'px')
             .style('bottom',(height+250-xy[1])+'px');
     }
     function onShareOut(){
@@ -221,7 +234,7 @@ function drawModeChart(mode,ctx){
             .transition()
             .style('opacity',1);
         tooltip
-            .style('left',s.x+s.dx/2+margin.l-90+'px')
+            .style('left',s.x+s.dx/2+margin.l-100+'px')
             .style('bottom',(height+margin.b-s.y+50)+'px');
         tooltip
             .append('p')
@@ -235,8 +248,8 @@ function drawModeChart(mode,ctx){
         tooltip
             .append('p')
             .html((function(){
-                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
-            })());
+                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) commute by '+s.mode;
+            })())
     })
     dispatch.on('out.chart',function(){
         tooltip
@@ -290,8 +303,6 @@ function drawModeChart(mode,ctx){
         })
         return positions;
     }
-
-
 
 }
 
@@ -563,7 +574,7 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
 
     projection
         .center([-71.095190,42.314796])
-        .scale(170000)
+        .scale(160000)
         .translate([width/2,height/2])
         .precision(.1)
 
@@ -590,13 +601,13 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
         .attr('width',width/2)
         .attr('height',30);
     legend.selectAll('.legend-cat')
-        .data([0,.05,.1,.15,.2])
+        .data(d3.range(7))
         .enter()
         .append('rect')
         .attr('x',function(d,i){
-            return i*width/20
+            return i*width/35
         })
-        .attr('width',width/20)
+        .attr('width',width/35)
         .attr('height',4)
         .style('fill',function(d){
             return scaleColor(d);
@@ -625,8 +636,8 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
     //clean up data
     var _data = d3.map(data, function(d){return d.geoid2;})
 
-    //variable for displaying current time share, by default showing "under 5"
-    var tIndex = 0;
+    //variable for displaying current time share, by default showing "carpool"
+    var mIndex = 6;
 
     //Draw tracts
     var tracts = canvas.selectAll('.tract')
@@ -643,7 +654,7 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
         .style('fill',function(d){
             var t = _data.get(d.properties.GEOID10);
             if(!t){return 'rgb(50,50,50)';}
-            return scaleColor(t.timeShares[tIndex].share);
+            return scaleColorByLq(t.modeShares[mIndex].share/cityWorkerByMode.get(mIndex).share);
         })
 
     //non-interactive neighborhood overlay
@@ -665,9 +676,9 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
         var xy = path.centroid(d);
 
         //emit event back to chart; d -> geojson feature data
-        dispatch.mapHover(d.properties.GEOID10,tIndex);
+        dispatch.mapHover(d.properties.GEOID10,mIndex);
 
-        var s = t.timeShares[tIndex];
+        var s = t.modeShares[mIndex];
 
         //Populate tooltip content
         tooltip.selectAll('p')
@@ -687,8 +698,8 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
         tooltip
             .append('p')
             .html((function(){
-                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
-            })());
+                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) commute by '+s.mode+', '+ scaleThreshold(s.share/cityWorkerByMode.get(mIndex).share) + ' city average of '+format(cityWorkerByMode.get(mIndex).share);
+            })())
 
         //Move visual target
         visualTarget
@@ -700,7 +711,7 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
     function onTractMove(d){
         var xy = d3.mouse(ctx.node());
         tooltip
-            .style('left',xy[0]-90+'px')
+            .style('left',xy[0]-100+'px')
             .style('bottom',(height+250-xy[1])+'px');
     }
     function onTractLeave(d){
@@ -709,7 +720,7 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
 
     dispatch.on('chartHover',function(s){
         //update the current time share to display, would also need to update text
-        tIndex = s.tIndex;
+        mIndex = s.mIndex;
         metainfo.html(s.mode);
 
 
@@ -718,7 +729,7 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
             .style('fill',function(d){
                 var t = _data.get(d.properties.GEOID10);
                 if(!t){return 'rgb(50,50,50)';}
-                return scaleColor(t.timeShares[tIndex].share);
+                return scaleColorByLq(t.modeShares[mIndex].share/cityWorkerByMode.get(mIndex).share);
             })
 
         var xy;
@@ -736,7 +747,7 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
             .transition()
             .style('opacity',1);
         tooltip
-            .style('left',xy[0]+margin.l-90+'px')
+            .style('left',xy[0]+margin.l-100+'px')
             .style('bottom',(height+margin.b-xy[1]+50)+'px');
         tooltip
             .append('p')
@@ -750,7 +761,7 @@ function drawMap(tractGeo,hoodGeo,data,ctx){
         tooltip
             .append('p')
             .html((function(){
-                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) have commutes in the '+s.time+' minute range';
+                return '<span class="data">'+s.trip+'</span> workers (<span class="data">'+format(s.share)+'</span>) commute by '+s.mode+', '+ scaleThreshold(s.share/cityWorkerByMode.get(mIndex).share) + ' city average of '+format(cityWorkerByMode.get(mIndex).share);
             })())
 
         //Move visual target
@@ -860,6 +871,8 @@ function parseMode(d){
             trip:+d[key],
             share:+d[key]/newRow.total
         })
+
+        cityWorkerByMode.get(mIndex).total += (+d[key]);
 
         mIndex += 1;
     }
