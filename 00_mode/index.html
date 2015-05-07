@@ -3,7 +3,6 @@
 	<head>
 		<meta charset="utf-8">
 		<title>Commute Modes</title>
-		<link href='http://fonts.googleapis.com/css?family=Roboto+Condensed:400,700' rel='stylesheet' type='text/css'>
 		<link href="bower_components\bootstrap\dist\css\bootstrap.min.css" rel="stylesheet"/>
 		<link href="style.css" rel="stylesheet"/>
 	</head>
@@ -13,15 +12,14 @@
 		    <div class="modal-content">
 		      <div class="modal-header">
 		        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-		        <h3 class="modal-title">How Long is Your Commute?</h4>
+		        <h3 class="modal-title">How Do Bostonians Get to Work?</h4>
 		      </div>
 		      <div class="modal-body">
-		        <p>Hover over this graphic to learn how long it takes people living in different areas of Boston to get to work (and who has the extreme commutes).</p>
-		        <h4><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> What are those red rectangles?</h4>
-		        <p>Each row of rectangles represents a single census tract (made up of many street blocks). Within this row, each rectangle represents a group of people with a certain commute time. The darker the color, the more people belong to this group.</p>
-		        <img src="assets/legend-img-04.png" />
-		        <p>These rows/census tracts are grouped together by neighborhood.</p>
-		        <img src="assets/legend-img-05.png" />
+		        <p>Hover over the graphic to learn how people in different parts of the city get to work, and how that compares to the city overall.</p>
+		        <h4><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> What are those rectangles?</h4>
+		        <p>Each row of rectangles represents a single census tract. Within this row, each rectangle represents the number of workers commuting by different modes.</p>
+		        <h4><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> What does the map show?</h4>
+		        <p>In different areas of Boston, do people proportionally take transit/drive/walk etc. more than the city at large? Red means more the city average, blue represents below city average, and white is in the middle.</p>
 		        <h4><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> Where is this data from?</h4>
 		        <p>American Community Survey 2013 5-year estimate</p>
 		      </div>
@@ -44,7 +42,12 @@
             </div>
             <div class="canvas loading" id="choropleth">
             	<div class="canvas-meta">
-            		<h2 class="canvas-title">How Does the % of Workers Commuting by <span class="cat"></span> Compare to City Average?</h2>
+            		<h2 class="canvas-title">How Does the % of Workers Commuting by <span class="cat">Drive Alone</span> Compare to City Average?</h2>
+					<div class="input-group">
+					  <span class="input-group-addon" id="basic-addon1">Where am I?</span>
+					  <input type="text" class="form-control address" placeholder="Type address here" aria-describedby="basic-addon1">
+					</div>
+
             	</div>
             	<div class="custom-tooltip"></div>
             </div>
@@ -55,7 +58,7 @@
 		<script src="script/lib/jquery/jquery-1.11.1.min.js"></script>
 		<script src="bower_components\bootstrap\js\modal.js"></script>
 		<script src="script/lib/queue/queue.min.js"></script>
-		<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+		<script src="script/lib/d3/d3.min.js"></script>
 		<script src="script\lib\d3-plugins\fisheye\fisheye.js"></script>
 		<script src="script/script.js"></script>
 	</body>

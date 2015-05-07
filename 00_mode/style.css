@@ -52,11 +52,16 @@ html,body{
 	.container #choropleth{
 		width:50%;
 	}
+	.container .canvas .canvas-meta .input-group{
+		width:70%;
+		margin: 10px 0 20px;
+	}
+
 
 
 /*------------font-------------*/
 body{
-	font-family:"Roboto Condensed",Helvetica,sans-serif;
+	font-family:"Gravur",Helvetica,sans-serif;
 	font-size: 16px;
 	line-height:120%;
     color:#fff;
@@ -114,7 +119,7 @@ p{
 	}
 .canvas .canvas-meta{
 	position:absolute;
-	top:120px;
+	top:100px;
 	left:100px;
 	width:50%;
 	color:rgb(80,80,80);
@@ -131,4 +136,20 @@ p{
 }
 .canvas .target{
 	pointer-events:none;
+}
+.canvas .x-tick line{
+	fill:none;
+	stroke:white;
+	pointer-events:none;
+}
+
+@font-face{
+	font-family:Gravur;
+	src:url('assets/fonts/Gravur Condensed-Bold.otf');
+	font-weight:bold;
+}
+@font-face{
+	font-family:Gravur;
+	src:url('assets/fonts/Gravur Condensed-Regular.otf');
+	font-weight:normal;
 }
